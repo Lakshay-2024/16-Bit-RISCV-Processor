@@ -1,5 +1,8 @@
 `timescale 1ns / 1ps
 
+/// First it is defining various fields of Instruction Registers and the Opcodes for various instructions like MOV,ADD,LOAD etc.
+
+//<--------------------------->//
 ///////////fields of IR
 `define oper_type IR[31:27]
 `define rdst      IR[26:22]
@@ -51,8 +54,8 @@
 
 module top(
 input clk,sys_rst,
-input [15:0] din,
-output reg [15:0] dout
+ input [15:0] din,   // For receiving input from ports
+ output reg [15:0] dout  // To display output to ports
 );
 
 ////////////////adding program and data memory
@@ -78,6 +81,9 @@ reg [16:0] temp_sum;
 
 reg jmp_flag = 0;
 reg stop = 0;
+
+
+ ////Defining task to decode the instructions int the instruction register
 
 task decode_inst();
  begin
@@ -295,7 +301,7 @@ endtask
 
 
 
-///////////////////////logic for condition flag
+///////////////////////logic for condition flag decoding
 
 
 task decode_condflag();
@@ -360,7 +366,7 @@ endtask
 ///////////reading program
 
 initial begin
-$readmemb("my_data.mem",inst_mem);
+ $readmemb("my_data.mem",inst_mem);  // data is loaded through a coe file in the memory registers.
 end
 
 
@@ -368,6 +374,9 @@ end
 reg [2:0] count = 0;
 integer PC = 0;
 
+
+ ///Definign an fsm for the working of the processor.
+ 
 ////////////////////////////////// fsm states
 parameter idle = 0, fetch_inst = 1, dec_exec_inst = 2, next_inst = 3, sense_halt = 4, delay_next_inst = 5;
 //////idle : check reset state
@@ -398,25 +407,31 @@ begin
      next_state = fetch_inst;
    end
 
+   // Fetching instruction from Program Memory
   fetch_inst: begin
     IR          =  inst_mem[PC];   
     next_state  = dec_exec_inst;
   end
-  
+
+   //Decoding the instructions in the control unit.
+   
   dec_exec_inst: begin
     decode_inst();
     decode_condflag();
     next_state  = delay_next_inst;   
   end
   
-  
+  // Providing a certain delay in next instruction so that the present instruction can be completely executed.
+   
   delay_next_inst:begin
   if(count < 4)
        next_state  = delay_next_inst;       
      else
        next_state  = next_inst;
   end
-  
+
+   // Generating address of program counter based on logic of condition flags.
+   
   next_inst: begin
       next_state = sense_halt;
       if(jmp_flag == 1'b1)
